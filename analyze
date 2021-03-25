@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+set -eou pipefail
+
+usage() {
+  echo " Usage: $0 -n <vpc> " 1>&2;
+  echo '
+  Example: '$0' -n "vpc-123456789"
+  '
+}
+
+if [ $# -le 1 ]; then
+  usage
+  exit 1
+fi
+
+declare vpc=""
+
+while getopts ":n:" arg; do
+  case "${arg}" in
+    n)
+      vpc=${OPTARG}
+      ;;
+  esac
+done
+shift $((OPTIND-1))
+
+#echo -n "Getting CIDR block for the vpc id ${vpc}... "
+vpcCIDR=$(aws ec2 describe-vpcs --vpc-ids "${vpc}" | jq --raw-output '.Vpcs[0].CidrBlock')
+#echo "${vpcCIDR}"
+
+subnets=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=${vpc}"| jq --raw-output '[.Subnets[] | {CidrBlock,AvailabilityZoneId,AvailableIpAddressCount,SubnetId}]')
+
+echo "${subnets}"
